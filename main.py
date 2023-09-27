@@ -94,19 +94,17 @@ class CloudflareSolver:
         Dict[str, str]
             The dictionary of proxy parameters.
         """
-        if "@" in proxy:
-            proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
-            server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
+        if "@" not in proxy:
+            return {"server": proxy}
 
-            proxy_params = {
-                "server": server,
-                "username": proxy_regex.group(2),
-                "password": proxy_regex.group(3),
-            }
-        else:
-            proxy_params = {"server": proxy}
+        proxy_regex = re.match("(.+)://(.+):(.+)@(.+)", proxy)
+        server = f"{proxy_regex.group(1)}://{proxy_regex.group(4)}"
 
-        return proxy_params
+        return {
+            "server": server,
+            "username": proxy_regex.group(2),
+            "password": proxy_regex.group(3),
+        }
 
     def _get_turnstile_frame(self) -> Optional[Frame]:
         """
@@ -117,17 +115,20 @@ class CloudflareSolver:
         Optional[Frame]
             The Cloudflare turnstile frame.
         """
-        for frame in self.page.frames:
-            if (
-                re.match(
-                    "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
-                    frame.url,
+        return next(
+            (
+                frame
+                for frame in self.page.frames
+                if (
+                    re.match(
+                        "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/[bg]/turnstile",
+                        frame.url,
+                    )
+                    is not None
                 )
-                is not None
-            ):
-                return frame
-
-        return None
+            ),
+            None,
+        )
 
     @property
     def cookies(self) -> List[Cookie]:
@@ -149,11 +150,10 @@ class CloudflareSolver:
         Optional[Cookie]
             The Cloudflare clearance cookie. Returns None if the cookie is not found.
         """
-        for cookie in cookies:
-            if cookie["name"] == "cf_clearance":
-                return cookie
-
-        return None
+        return next(
+            (cookie for cookie in cookies if cookie["name"] == "cf_clearance"),
+            None,
+        )
 
     def detect_challenge(self) -> Optional[ChallengePlatform]:
         """
@@ -166,11 +166,14 @@ class CloudflareSolver:
         """
         html = self.page.content()
 
-        for platform in ChallengePlatform:
-            if f"cType: '{platform.value}'" in html:
-                return platform
-
-        return None
+        return next(
+            (
+                platform
+                for platform in ChallengePlatform
+                if f"cType: '{platform.value}'" in html
+            ),
+            None,
+        )
 
     def solve_challenge(self) -> None:
         """Solve the Cloudflare challenge on the current page."""
