@@ -159,8 +159,6 @@ class CloudflareSolver:
             if cookie["name"] == "cf_clearance":
                 return cookie
 
-        return None
-
     def detect_challenge(self) -> Optional[ChallengePlatform]:
         """
         Detect the Cloudflare challenge platform on the current page.
@@ -175,8 +173,6 @@ class CloudflareSolver:
         for platform in ChallengePlatform:
             if f"cType: '{platform.value}'" in html:
                 return platform
-
-        return None
 
     def solve_challenge(self) -> None:
         """Solve the Cloudflare challenge on the current page."""
